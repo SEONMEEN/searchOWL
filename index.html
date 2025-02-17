@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ค้นหาจังหวัดจาก OWL</title>
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background-color: #f4f8fb;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        select,
+        input {
+            width: 90%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #bcd7f5;
+            border-radius: 20px;
+            background: #eef7ff;
+            font-size: 16px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        select:focus,
+        input:focus {
+            border-color: #82b1ff;
+            background: #e3f2fd;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            border: 1px solid #bcd7f5;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #bcd7f5;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background: #f4f8fb;
+        }
+
+        tr:hover {
+            background: #e3f2fd;
+            transition: 0.3s;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>ค้นหาข้อมูลจังหวัดจาก OWL</h1>
+        <select id="languageSelect">
+            <option value="th">ภาษาไทย</option>
+            <option value="en">English</option>
+        </select>
+        <input type="text" id="searchBox" placeholder="พิมพ์ชื่อจังหวัด...">
+        <table>
+            <thead>
+                <tr>
+                    <th>ชื่อจังหวัด</th>
+                    <th>คำขวัญ</th>
+                    <th>ชื่อดั้งเดิม</th>
+                    <th>ต้นไม้ประจำจังหวัด</th>
+                    <th>ดอกไม้ประจำจังหวัด</th>
+                    <th>ตราประจำจังหวัด</th>
+                    <th>เว็บไซต์</th>
+                    <th>พิกัด (ละติจูด, ลองจิจูด)</th>
+                    <th>รูปภาพ</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                <tr>
+                    <td colspan="9">กำลังโหลดข้อมูล...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function fetchData() {
+            const language = document.getElementById("languageSelect").value;
+            try {
+                const response = await fetch(`http://127.0.0.1:5000/search?lang=${language}`);
+                const data = await response.json();
+                displayData(data);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                document.getElementById("dataTable").innerHTML = "<tr><td colspan='9'>โหลดข้อมูลล้มเหลว</td></tr>";
+            }
+        }
+
+        function displayData(data) {
+            const tableBody = document.getElementById("dataTable");
+            tableBody.innerHTML = "";
+            data.forEach(item => {
+                let row = `<tr>
+                    <td>${item.province || "-"}</td>
+                    <td>${item.motto || "-"}</td>
+                    <td>${item.traditionalName || "-"}</td>
+                    <td>${item.tree || "-"}</td>
+                    <td>${item.flower || "-"}</td>
+                    <td>${item.seal || "-"}</td>
+                    <td>${item.website ? `<a href='${item.website}' target='_blank'>${item.website}</a>` : "-"}</td>
+                    <td>${item.latitude && item.longitude ? `${item.latitude}, ${item.longitude}` : "-"}</td>
+                    <td>
+                        ${item.image ? `<img src='${item.image}' alt='${item.province}' style='width: 100px; height: auto; cursor: pointer;' onclick='openImage("${item.image}")'>` : "-"}
+                    </td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        document.getElementById("searchBox").addEventListener("input", function () {
+            let filter = this.value.toLowerCase();
+            let rows = document.querySelectorAll("#dataTable tr");
+            rows.forEach(row => {
+                let province = row.cells[0]?.textContent.toLowerCase();
+                row.style.display = province && province.includes(filter) ? "" : "none";
+            });
+        });
+
+        document.getElementById("languageSelect").addEventListener("change", fetchData);
+
+        fetchData();
+
+        function openImage(imageSrc) {
+            // สร้าง div สำหรับแสดงภาพที่ขยาย (Modal)
+            const imageModal = document.createElement('div');
+            imageModal.style.position = 'fixed';
+            imageModal.style.top = '0';
+            imageModal.style.left = '0';
+            imageModal.style.width = '100%';
+            imageModal.style.height = '100%';
+            imageModal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            imageModal.style.display = 'flex';
+            imageModal.style.justifyContent = 'center';
+            imageModal.style.alignItems = 'center';
+            imageModal.style.zIndex = '9999';
+
+            // เพิ่มรูปภาพที่ขยาย
+            const img = document.createElement('img');
+            img.src = imageSrc;
+            img.style.maxWidth = '90%';
+            img.style.maxHeight = '90%';
+            imageModal.appendChild(img);
+
+            // ปิดการขยายเมื่อคลิกที่พื้นที่ว่าง
+            imageModal.addEventListener('click', () => {
+                imageModal.remove(); // ลบ modal ออกเมื่อคลิกพื้นที่ว่าง
+            });
+
+            // เพิ่ม div นี้ลงใน body
+            document.body.appendChild(imageModal);
+        }
+
+
+    </script>
+
+</body>
+
+</html>
